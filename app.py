@@ -94,22 +94,31 @@ elif app_mode == "📝 Qualitative Text Mining (NLP)":
     with open('raw_field_surveys.csv', 'r') as f:
         st.sidebar.download_button("📥 Download Qualitative Data", f.read(), file_name="qualitative_input.csv", mime="text/csv")
         
-    uploaded_file = st.file_uploader("Upload 'qualitative_input.csv' to execute text text categorization rules", type=["csv"])
+    uploaded_file = st.file_uploader("Upload 'qualitative_input.csv' to execute text categorization rules", type=["csv"])
     
     if uploaded_file is not None:
         df_nlp = pd.read_csv(uploaded_file)
         
-        # Define Classification Matrix
+        # Verify the target column exists safely before execution
+        if 'field_narrative_notes' not in df_nlp.columns:
+            st.error("❌ Schema Validation Failure: Uploaded file missing the 'field_narrative_notes' text field.")
+            st.stop()
+        
+        # Corrected Classification Matrix returning a precise list structure
         def classify_text_feedback(text):
             text_upper = str(text).upper()
             
-            # 1. Classification Rules
-            if "SHORTAGE" in text_upper or "DRUGS" in text_upper or "MEDICINE" in text_upper: category = "Supply Shortage"
-            elif "LEAK" in text_upper or "INFRASTRUCTURE" in text_upper or "WATER" in text_upper: category = "Infrastructure Failure"
-            elif "BEHAVIOR" in text_upper or "POOR" in text_upper or "UNHELPFUL" in text_upper: category = "Staff Conduct Issue"
-            else: category = "Positive Program Delivery"
+            # 1. Automated Classification Rules
+            if "SHORTAGE" in text_upper or "DRUGS" in text_upper or "MEDICINE" in text_upper: 
+                category = "Supply Shortage"
+            elif "LEAK" in text_upper or "INFRASTRUCTURE" in text_upper or "WATER" in text_upper: 
+                category = "Infrastructure Failure"
+            elif "BEHAVIOR" in text_upper or "POOR" in text_upper or "UNHELPFUL" in text_upper: 
+                category = "Staff Conduct Issue"
+            else: 
+                category = "Positive Program Delivery"
             
-            # 2. Sentiment Scoring Logic
+            # 2. Sentiment Scoring Metrics
             negative_words = ["SHORTAGE", "POOR", "UNHELPFUL", "FAILED", "BROKE", "LEAKED", "ANOMALY"]
             positive_words = ["EXCELLENT", "SMOOTH", "SUCCESSFUL", "SATISFACTION", "GOOD"]
             
@@ -120,12 +129,17 @@ elif app_mode == "📝 Qualitative Text Mining (NLP)":
                 if w in text_upper: score += 1
                 
             sentiment = "Positive" if score > 0 else ("Negative" if score < 0 else "Neutral")
-            return pd.Series([category, sentiment])
+            
+            # CRITICAL FIX: Return as a zip-ready tuple/list structure rather than a raw indexed Series
+            return [category, sentiment]
 
-        print("Executing NLP text transformations...")
-        df_nlp[['Inferred_Category', 'Sentiment_Analysis']] = df_nlp['field_narrative_notes'].apply(classify_text_feedback)
+        with st.spinner("Executing NLP text transformations across narrative rows..."):
+            # Deploys standard result expansion to safely map parameters without KeyError loops
+            res = df_nlp['field_narrative_notes'].apply(classify_text_feedback)
+            df_nlp['Inferred_Category'] = [r[0] for r in res]
+            df_nlp['Sentiment_Analysis'] = [r[1] for r in res]
 
-        # Output UI Metrics
+        # Output UI Visualizations
         col1, col2 = st.columns(2)
         with col1:
             st.markdown("#### 🚨 Distribution of Field Issues & Operational Failures")
@@ -133,6 +147,10 @@ elif app_mode == "📝 Qualitative Text Mining (NLP)":
         with col2:
             st.markdown("#### 📈 Calculated Community Sentiment Trend Matrix")
             st.bar_chart(df_nlp['Sentiment_Analysis'].value_counts())
+            
+        st.markdown("### 📋 Audited Qualitative Narrative Data Mart")
+        st.dataframe(df_nlp[['survey_id', 'field_narrative_notes', 'Inferred_Category', 'Sentiment_Analysis']], use_container_width=True)
+        st.success("✓ Narrative classifications computed successfully. Qualitative anomalies mapped.")
             
         st.markdown("### 📋 Audited Qualitative Narrative Data Mart")
         st.dataframe(df_nlp[['survey_id', 'field_narrative_notes', 'Inferred_Category', 'Sentiment_Analysis']], use_container_width=True)
