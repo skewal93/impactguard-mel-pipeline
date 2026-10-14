@@ -23,7 +23,7 @@ def get_messy_district(dist):
     return dist
 
 # ==============================================================================
-# MODULE 1: LOGFRAME PIPELINE GENERATOR (5,000 Rows)
+# MODULE 1 & 2: LOGFRAME & FORENSIC GENERATORS
 # ==============================================================================
 print("⚡ Generating Module 1: 5,000 Logframe records...")
 kobo_data = [{'submission_id': f"SUB-{100000+i}", 'patient_id': f"P-{200000+i}", 'district_reported': get_messy_district(random.choice(official_districts)), 'phc_visited': f"PHC-{random.randint(1,50)}", 'treatment_status': random.choice(['Completed', 'Completed', 'Pending', 'Dropped'])} for i in range(5000)]
@@ -43,18 +43,26 @@ with open('whatsapp_tracker_logs.json', 'w') as f:
 logframe_data = [{'indicator_id': f"IND-{random.randint(1000,9999)}", 'indicator_name': ind, 'target_district': d} for d in official_districts for ind in ["Total Patients Treated", "Total Vaccines Distributed", "Operational Bed Capacity"]]
 pd.DataFrame(logframe_data).to_csv('master_logframe_template.csv', index=False)
 
-# ==============================================================================
-# MODULE 2: FORENSIC SURVEILLANCE GENERATOR (2,000 Rows)
-# ==============================================================================
 print("🕵️ Generating Module 2: 2,000 Forensic Auditing records...")
 survey_data = []
 base_lat, base_lon = 19.0760, 72.8777 
+
+# Sample text notes for text mining module
+text_samples = [
+    "The clinic was closed on Tuesday because the roof leaked and broke infrastructure.",
+    "Excellent distribution, doctor arrived on time and vaccines were given smoothly.",
+    "Major shortage of medicines and drugs. Patients are being turned away completely.",
+    "Staff behavior was very poor and unhelpful. Facility had zero clean drinking water.",
+    "Successful checkup camp conducted today, high beneficiary satisfaction.",
+    "Supply chain failure. The refrigerator broke down and spoiled the medical stock."
+]
 
 for i in range(2000):
     worker_id = f"FIELD-W{random.randint(10, 25)}"
     duration_mins = max(5.0, round(random.normalvariate(22, 5), 1))
     lat, lon = base_lat + random.uniform(-0.5, 0.5), base_lon + random.uniform(-0.5, 0.5)
     answers = [random.randint(1, 5) for _ in range(5)]
+    narrative_note = random.choice(text_samples)
     
     fraud_trigger = random.random()
     if fraud_trigger < 0.03:
@@ -68,7 +76,8 @@ for i in range(2000):
     survey_data.append({
         'survey_id': f"SRV-{500000+i}", 'worker_id': worker_id, 'interview_duration_mins': round(duration_mins, 1),
         'latitude': round(lat, 5), 'longitude': round(lon, 5),
-        'q1_score': answers[0], 'q2_score': answers[1], 'q3_score': answers[2], 'q4_score': answers[3], 'q5_score': answers[4]
+        'q1_score': answers, 'q2_score': answers, 'q3_score': answers, 'q4_score': answers, 'q5_score': answers,
+        'field_narrative_notes': narrative_note
     })
 pd.DataFrame(survey_data).to_csv('raw_field_surveys.csv', index=False)
-print("🚀 Master Sandbox datasets successfully staged.")
+print("🚀 Master Sandbox datasets successfully staged with text fields.")
