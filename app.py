@@ -6,10 +6,30 @@ from rapidfuzz import process, utils
 
 st.set_page_config(page_title="ImpactGuard Enterprise Platform", page_icon="🛡️", layout="wide")
 
-# Backend Auto-Initialization
+# ==============================================================================
+# UPGRADED BACKEND AUTO-INITIALIZATION HANDLER (Cache & Schema Reset)
+# ==============================================================================
 required_files = ['field_survey_kobo.csv', 'government_portal_drop.csv', 'whatsapp_tracker_logs.json', 'master_logframe_template.csv', 'raw_field_surveys.csv']
-if [f for f in required_files if not os.path.exists(f)]:
-    with st.spinner("⚡ Initializing Multi-Module Datasets..."):
+
+# Check if ANY file is missing, OR if the forensic file exists but is outdated (missing text column)
+force_regeneration = False
+if os.path.exists('raw_field_surveys.csv'):
+    try:
+        test_df = pd.read_csv('raw_field_surveys.csv', nrows=5)
+        if 'field_narrative_notes' not in test_df.columns:
+            force_regeneration = True # Old file detected, trigger overwrite!
+    except Exception:
+        force_regeneration = True
+
+missing_files = [f for f in required_files if not os.path.exists(f)]
+
+if missing_files or force_regeneration:
+    with st.spinner("⚡ System Update: Overwriting legacy schemas & generating 7,000+ modern records..."):
+        # Explicitly delete old files to prevent cache retention errors
+        for f in required_files:
+            if os.path.exists(f):
+                os.remove(f)
+                
         import generate_big_data
         st.rerun()
 
